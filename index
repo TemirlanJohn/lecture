@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Реляционная база данных — Лекция</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --accent: #00e5ff;
+    --accent2: #ff6b35;
+    --accent3: #7c3aed;
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+    --border: rgba(0,229,255,0.15);
+    --glow: 0 0 20px rgba(0,229,255,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 300;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* HEADER */
+  header {
+    padding: 60px 0 40px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 60px;
+  }
+
+  .tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: rgba(0,229,255,0.08);
+    border: 1px solid rgba(0,229,255,0.2);
+    display: inline-block;
+    padding: 5px 14px;
+    margin-bottom: 24px;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(38px, 6vw, 64px);
+    font-weight: 900;
+    line-height: 1.1;
+    letter-spacing: -1px;
+    margin-bottom: 16px;
+  }
+
+  h1 span.hl { color: var(--accent); }
+
+  .subtitle {
+    font-size: 16px;
+    color: var(--text-dim);
+    max-width: 520px;
+  }
+
+  /* SECTIONS */
+  section {
+    margin-bottom: 64px;
+  }
+
+  .section-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(24px, 4vw, 36px);
+    font-weight: 700;
+    margin-bottom: 20px;
+    line-height: 1.2;
+  }
+
+  h3 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent2);
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    margin-top: 28px;
+  }
+
+  p {
+    color: var(--text-dim);
+    margin-bottom: 16px;
+    font-size: 15px;
+  }
+
+  strong { color: var(--text); font-weight: 500; }
+
+  /* DEFINITION BOX */
+  .def-box {
+    background: var(--surface);
+    border-left: 3px solid var(--accent);
+    padding: 28px 32px;
+    margin: 32px 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .def-box::before {
+    content: '«';
+    font-family: 'Playfair Display', serif;
+    font-size: 120px;
+    color: rgba(0,229,255,0.05);
+    position: absolute;
+    top: -20px;
+    left: 10px;
+    line-height: 1;
+  }
+
+  .def-box p {
+    font-size: 16px;
+    color: var(--text);
+    font-style: italic;
+    position: relative;
+    margin-bottom: 0;
+  }
+
+  /* TABLE DEMO */
+  .table-demo {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    margin: 32px 0;
+  }
+
+  .table-demo-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    background: rgba(0,229,255,0.05);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    letter-spacing: 2px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+  }
+
+  thead th {
+    background: rgba(124,58,237,0.15);
+    color: #c4b5fd;
+    font-weight: 600;
+    padding: 12px 20px;
+    text-align: left;
+    letter-spacing: 1px;
+    font-size: 11px;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(124,58,237,0.3);
+  }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    transition: background 0.2s;
+  }
+
+  tbody tr:hover { background: rgba(0,229,255,0.04); }
+
+  tbody td {
+    padding: 11px 20px;
+    color: var(--text-dim);
+  }
+
+  .pk { color: var(--accent2); font-weight: 600; }
+  .fk { color: #86efac; }
+
+  /* PRINCIPLES GRID */
+  .principles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+    margin: 24px 0;
+  }
+
+  .principle-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 24px;
+    position: relative;
+    transition: border-color 0.3s, transform 0.3s;
+  }
+
+  .principle-card:hover {
+    border-color: rgba(0,229,255,0.4);
+    transform: translateY(-2px);
+  }
+
+  .principle-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 40px;
+    font-weight: 900;
+    color: rgba(0,229,255,0.1);
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+
+  .principle-card h4 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .principle-card p {
+    font-size: 13px;
+    margin: 0;
+  }
+
+  /* RELATIONSHIP DIAGRAM */
+  .rel-diagram {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 32px;
+    margin: 32px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .entity-box {
+    background: var(--surface2);
+    border: 2px solid;
+    padding: 16px 24px;
+    text-align: center;
+    min-width: 140px;
+  }
+
+  .entity-box.primary { border-color: var(--accent); }
+  .entity-box.secondary { border-color: var(--accent3); }
+  .entity-box.tertiary { border-color: var(--accent2); }
+
+  .entity-box .entity-name {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+
+  .entity-box.primary .entity-name { color: var(--accent); }
+  .entity-box.secondary .entity-name { color: #c4b5fd; }
+  .entity-box.tertiary .entity-name { color: var(--accent2); }
+
+  .entity-attrs {
+    list-style: none;
+    text-align: left;
+    font-size: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .entity-attrs li { color: var(--text-dim); padding: 2px 0; }
+  .entity-attrs .attr-pk { color: var(--accent2); }
+  .entity-attrs .attr-fk { color: #86efac; }
+
+  .rel-arrow {
+    text-align: center;
+    color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+  }
+
+  .rel-arrow .arrow { font-size: 22px; color: var(--accent); display: block; }
+
+  /* SQL BLOCK */
+  .sql-block {
+    background: #0d1117;
+    border: 1px solid rgba(0,229,255,0.1);
+    padding: 24px 28px;
+    margin: 24px 0;
+    position: relative;
+    overflow-x: auto;
+  }
+
+  .sql-block::before {
+    content: 'SQL';
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    position: absolute;
+    top: 10px;
+    right: 16px;
+  }
+
+  .sql-block code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    color: #e2e8f0;
+    white-space: pre;
+    display: block;
+  }
+
+  .kw { color: #c4b5fd; }
+  .tb { color: var(--accent); }
+  .vl { color: #86efac; }
+  .cm { color: #475569; font-style: italic; }
+  .dt { color: var(--accent2); }
+
+  /* TYPES OF RELATIONSHIPS */
+  .rel-types {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin: 24px 0;
+  }
+
+  @media(max-width: 600px) { .rel-types { grid-template-columns: 1fr; } }
+
+  .rel-type {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 20px;
+    text-align: center;
+  }
+
+  .rel-type .badge {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 900;
+    margin-bottom: 8px;
+  }
+
+  .rel-type:nth-child(1) .badge { color: var(--accent); }
+  .rel-type:nth-child(2) .badge { color: var(--accent2); }
+  .rel-type:nth-child(3) .badge { color: #c4b5fd; }
+
+  .rel-type h4 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+
+  .rel-type p { font-size: 12px; margin: 0; }
+
+  /* KEY TERMS */
+  .glossary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 24px 0;
+  }
+
+  @media(max-width: 560px) { .glossary { grid-template-columns: 1fr; } }
+
+  .term {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 16px 20px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  .term-icon {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    background: rgba(0,229,255,0.08);
+    border: 1px solid rgba(0,229,255,0.2);
+    padding: 3px 7px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .term-body strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .term-body span {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  /* ADVANTAGES */
+  .adv-list {
+    list-style: none;
+    margin: 20px 0;
+  }
+
+  .adv-list li {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 14px;
+    color: var(--text-dim);
+  }
+
+  .adv-list li::before {
+    content: '✓';
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    color: var(--accent);
+    background: rgba(0,229,255,0.08);
+    border: 1px solid rgba(0,229,255,0.2);
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 12px;
+  }
+
+  /* POPULAR DBMS */
+  .dbms-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+    margin: 24px 0;
+  }
+
+  .dbms-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 20px 16px;
+    text-align: center;
+    transition: border-color 0.2s;
+  }
+
+  .dbms-card:hover { border-color: rgba(0,229,255,0.3); }
+
+  .dbms-card .dbms-name {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .dbms-card .dbms-type {
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  /* SUMMARY */
+  .summary-box {
+    background: linear-gradient(135deg, rgba(0,229,255,0.05), rgba(124,58,237,0.05));
+    border: 1px solid rgba(0,229,255,0.2);
+    padding: 40px;
+    margin: 48px 0;
+  }
+
+  .summary-box h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    color: var(--text);
+    margin-bottom: 16px;
+    margin-top: 0;
+  }
+
+  .summary-points {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .sp {
+    display: flex;
+    gap: 14px;
+    align-items: baseline;
+    font-size: 14px;
+    color: var(--text-dim);
+  }
+
+  .sp::before {
+    content: attr(data-n);
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--accent);
+    flex-shrink: 0;
+    width: 24px;
+  }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 32px 0;
+    margin-top: 80px;
+    text-align: center;
+  }
+
+  footer p {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: rgba(148,163,184,0.4);
+    margin: 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <header>
+    <div class="tag">Большие данные · Лекция 03</div>
+    <h1>Реляционная<br><span class="hl">база данных</span></h1>
+    <p class="subtitle">Структурированное хранение данных, таблицы, связи и язык SQL — фундамент современных информационных систем.</p>
+  </header>
+
+  <!-- 1. ОПРЕДЕЛЕНИЕ -->
+  <section>
+    <div class="section-label">01 — Определение</div>
+    <h2>Что такое реляционная база данных?</h2>
+
+    <div class="def-box">
+      <p><strong>Реляционная база данных (РБД)</strong> — это база данных, в которой информация организована в виде набора взаимосвязанных таблиц (отношений), где каждая строка представляет собой запись, а каждый столбец — атрибут этой записи.</p>
+    </div>
+
+    <p>Термин «реляционная» происходит от латинского слова <strong>relatio</strong> — «отношение». Математическую основу реляционной модели заложил учёный Эдгар Ф. Кодд (Edgar F. Codd) в 1970 году, опубликовав свою работу «A Relational Model of Data for Large Shared Data Banks».</p>
+
+    <p>В реляционной модели данные хранятся в <strong>таблицах (relations)</strong>. Между таблицами устанавливаются <strong>связи (relationships)</strong> с помощью специальных ключей.</p>
+  </section>
+
+  <!-- 2. СТРУКТУРА ТАБЛИЦЫ -->
+  <section>
+    <div class="section-label">02 — Структура данных</div>
+    <h2>Таблица как основная единица</h2>
+
+    <p>Каждая таблица в реляционной БД состоит из <strong>строк (кортежей, записей)</strong> и <strong>столбцов (атрибутов, полей)</strong>. Посмотрим на пример:</p>
+
+    <div class="table-demo">
+      <div class="table-demo-title">TABLE: STUDENTS — Таблица «Студенты»</div>
+      <table>
+        <thead>
+          <tr>
+            <th>student_id (PK)</th>
+            <th>last_name</th>
+            <th>first_name</th>
+            <th>group_id (FK)</th>
+            <th>gpa</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="pk">1001</td><td>Ахметов</td><td>Алибек</td><td class="fk">G-21</td><td>3.8</td></tr>
+          <tr><td class="pk">1002</td><td>Иванова</td><td>Мария</td><td class="fk">G-21</td><td>4.2</td></tr>
+          <tr><td class="pk">1003</td><td>Ким</td><td>Дмитрий</td><td class="fk">G-22</td><td>3.5</td></tr>
+          <tr><td class="pk">1004</td><td>Сейткали</td><td>Айгерим</td><td class="fk">G-22</td><td>4.7</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="glossary">
+      <div class="term">
+        <div class="term-icon">PK</div>
+        <div class="term-body">
+          <strong>Первичный ключ (Primary Key)</strong>
+          <span>Уникальный идентификатор каждой строки таблицы. Не может повторяться и быть пустым.</span>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-icon">FK</div>
+        <div class="term-body">
+          <strong>Внешний ключ (Foreign Key)</strong>
+          <span>Поле, ссылающееся на первичный ключ другой таблицы. Устанавливает связь между таблицами.</span>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-icon">ROW</div>
+        <div class="term-body">
+          <strong>Строка / Запись (Tuple)</strong>
+          <span>Один экземпляр сущности — конкретный студент, заказ, товар и т.д.</span>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-icon">COL</div>
+        <div class="term-body">
+          <strong>Столбец / Атрибут (Attribute)</strong>
+          <span>Характеристика сущности с определённым типом данных: текст, число, дата и др.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. СВЯЗИ -->
+  <section>
+    <div class="section-label">03 — Связи между таблицами</div>
+    <h2>Типы связей (Relationships)</h2>
+
+    <p>Главная сила реляционной модели — возможность устанавливать <strong>связи между таблицами</strong>, избегая дублирования данных. Связи реализуются через внешние ключи.</p>
+
+    <div class="rel-types">
+      <div class="rel-type">
+        <div class="badge">1 : 1</div>
+        <h4>Один к одному</h4>
+        <p>Каждой записи одной таблицы соответствует ровно одна запись другой. Пример: студент ↔ студенческий билет</p>
+      </div>
+      <div class="rel-type">
+        <div class="badge">1 : N</div>
+        <h4>Один ко многим</h4>
+        <p>Одной записи соответствует несколько записей в другой. Пример: группа → студенты</p>
+      </div>
+      <div class="rel-type">
+        <div class="badge">M : N</div>
+        <h4>Многие ко многим</h4>
+        <p>Реализуется через промежуточную таблицу. Пример: студенты ↔ курсы</p>
+      </div>
+    </div>
+
+    <div class="rel-diagram">
+      <div class="entity-box primary">
+        <div class="entity-name">GROUPS</div>
+        <ul class="entity-attrs">
+          <li class="attr-pk">▶ group_id PK</li>
+          <li>group_name</li>
+          <li>faculty</li>
+        </ul>
+      </div>
+      <div class="rel-arrow">
+        <span class="arrow">→</span>
+        <span>1 : N</span>
+      </div>
+      <div class="entity-box secondary">
+        <div class="entity-name">STUDENTS</div>
+        <ul class="entity-attrs">
+          <li class="attr-pk">▶ student_id PK</li>
+          <li>last_name</li>
+          <li class="attr-fk">◆ group_id FK</li>
+        </ul>
+      </div>
+      <div class="rel-arrow">
+        <span class="arrow">→</span>
+        <span>1 : N</span>
+      </div>
+      <div class="entity-box tertiary">
+        <div class="entity-name">GRADES</div>
+        <ul class="entity-attrs">
+          <li class="attr-pk">▶ grade_id PK</li>
+          <li class="attr-fk">◆ student_id FK</li>
+          <li>score</li>
+          <li>date</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. КЛЮЧЕВЫЕ ПРИНЦИПЫ -->
+  <section>
+    <div class="section-label">04 — Принципы</div>
+    <h2>Ключевые принципы реляционной модели</h2>
+
+    <div class="principles">
+      <div class="principle-card">
+        <div class="principle-num">01</div>
+        <h4>Атомарность</h4>
+        <p>Каждая ячейка таблицы содержит одно неделимое значение. Никаких списков и вложенных структур.</p>
+      </div>
+      <div class="principle-card">
+        <div class="principle-num">02</div>
+        <h4>Уникальность строк</h4>
+        <p>В таблице не может быть двух абсолютно одинаковых строк. Гарантируется первичным ключом.</p>
+      </div>
+      <div class="principle-card">
+        <div class="principle-num">03</div>
+        <h4>Целостность данных</h4>
+        <p>Ссылочная целостность: внешний ключ не может указывать на несуществующую запись.</p>
+      </div>
+      <div class="principle-card">
+        <div class="principle-num">04</div>
+        <h4>Независимость</h4>
+        <p>Физическое хранение данных не влияет на логику запросов. Изменение структуры прозрачно.</p>
+      </div>
+      <div class="principle-card">
+        <div class="principle-num">05</div>
+        <h4>Нормализация</h4>
+        <p>Устранение избыточности данных путём разделения на связанные таблицы (нормальные формы).</p>
+      </div>
+      <div class="principle-card">
+        <div class="principle-num">06</div>
+        <h4>Декларативность</h4>
+        <p>Запросы описывают ЧТО нужно получить, а не КАК. Система сама выбирает оптимальный план.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. SQL -->
+  <section>
+    <div class="section-label">05 — Язык запросов</div>
+    <h2>SQL — язык работы с РБД</h2>
+
+    <p>Для работы с реляционными базами данных используется язык <strong>SQL (Structured Query Language)</strong>. SQL делится на несколько подмножеств:</p>
+
+    <h3>DDL — Создание таблицы</h3>
+    <div class="sql-block"><code><span class="cm">-- Создание таблицы студентов</span>
+<span class="kw">CREATE TABLE</span> <span class="tb">students</span> (
+    student_id  <span class="dt">INT</span>          <span class="kw">PRIMARY KEY</span>,
+    last_name   <span class="dt">VARCHAR(50)</span>  <span class="kw">NOT NULL</span>,
+    first_name  <span class="dt">VARCHAR(50)</span>  <span class="kw">NOT NULL</span>,
+    group_id    <span class="dt">VARCHAR(10)</span>,
+    gpa         <span class="dt">DECIMAL(3,2)</span>,
+    <span class="kw">FOREIGN KEY</span> (group_id) <span class="kw">REFERENCES</span> <span class="tb">groups</span>(group_id)
+);</code></div>
+
+    <h3>DML — Выборка и JOIN</h3>
+    <div class="sql-block"><code><span class="cm">-- Получить студентов с названием группы</span>
+<span class="kw">SELECT</span>
+    s.last_name,
+    s.first_name,
+    g.group_name,
+    s.gpa
+<span class="kw">FROM</span>   <span class="tb">students</span> s
+<span class="kw">JOIN</span>   <span class="tb">groups</span>   g  <span class="kw">ON</span> s.group_id = g.group_id
+<span class="kw">WHERE</span>  s.gpa > <span class="vl">3.5</span>
+<span class="kw">ORDER BY</span> s.gpa <span class="kw">DESC</span>;</code></div>
+  </section>
+
+  <!-- 6. СУБД -->
+  <section>
+    <div class="section-label">06 — Системы управления</div>
+    <h2>Популярные реляционные СУБД</h2>
+
+    <p>СУБД (Система Управления Базами Данных) — это программное обеспечение, которое реализует реляционную модель и предоставляет инструменты для работы с данными.</p>
+
+    <div class="dbms-grid">
+      <div class="dbms-card">
+        <div class="dbms-name">PostgreSQL</div>
+        <div class="dbms-type">Открытый исходный код · Мощный</div>
+      </div>
+      <div class="dbms-card">
+        <div class="dbms-name">MySQL</div>
+        <div class="dbms-type">Открытый · Web-разработка</div>
+      </div>
+      <div class="dbms-card">
+        <div class="dbms-name">Oracle DB</div>
+        <div class="dbms-type">Коммерческий · Enterprise</div>
+      </div>
+      <div class="dbms-card">
+        <div class="dbms-name">MS SQL Server</div>
+        <div class="dbms-type">Microsoft · Корпоративный</div>
+      </div>
+      <div class="dbms-card">
+        <div class="dbms-name">SQLite</div>
+        <div class="dbms-type">Встраиваемый · Лёгкий</div>
+      </div>
+      <div class="dbms-card">
+        <div class="dbms-name">MariaDB</div>
+        <div class="dbms-type">MySQL-совместимый · OSS</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. ПРЕИМУЩЕСТВА -->
+  <section>
+    <div class="section-label">07 — Преимущества</div>
+    <h2>Достоинства реляционных баз данных</h2>
+
+    <ul class="adv-list">
+      <li><div><strong>Структурированность и порядок.</strong> Строгая схема гарантирует, что данные имеют предсказуемый формат и тип.</div></li>
+      <li><div><strong>Целостность данных.</strong> Механизмы ограничений (constraints) предотвращают появление «мусорных» или противоречивых данных.</div></li>
+      <li><div><strong>Мощные запросы.</strong> SQL позволяет делать сложные выборки, агрегации, соединения таблиц в одном запросе.</div></li>
+      <li><div><strong>Транзакционность (ACID).</strong> Атомарность, согласованность, изолированность и долговечность операций.</div></li>
+      <li><div><strong>Устранение дублирования.</strong> Нормализация позволяет хранить каждый факт ровно один раз.</div></li>
+      <li><div><strong>Зрелость технологий.</strong> Более 50 лет развития, огромное сообщество, надёжность и масштабируемость.</div></li>
+    </ul>
+  </section>
+
+  <!-- ИТОГ -->
+  <div class="summary-box">
+    <h3>Ключевые выводы лекции</h3>
+    <div class="summary-points">
+      <div class="sp" data-n="1">Реляционная БД хранит данные в таблицах, связанных друг с другом через ключи.</div>
+      <div class="sp" data-n="2">Первичный ключ (PK) — уникальный идентификатор строки; внешний ключ (FK) — ссылка на другую таблицу.</div>
+      <div class="sp" data-n="3">Три типа связей: один к одному, один ко многим, многие ко многим.</div>
+      <div class="sp" data-n="4">SQL — стандартный язык для создания, изменения и запроса реляционных данных.</div>
+      <div class="sp" data-n="5">Реляционная модель обеспечивает целостность, устраняет дублирование и поддерживает ACID-транзакции.</div>
+    </div>
+  </div>
+
+  <footer>
+    <p>Большие данные · Реляционная база данных · Лекция</p>
+  </footer>
+
+</div>
+</body>
+</html>
